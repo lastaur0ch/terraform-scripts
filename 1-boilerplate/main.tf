@@ -3,6 +3,8 @@ provider "aws" {
 }
 
 resource "aws_instance" "boilerplate" {
-  ami = "ami-0c55b159cbfafe1f0"
+  ami = "ami-0c7217cdde317cfec"
   instance_type = "t2.micro"
+  subnet_id = "subnet"
+  key_name = "key"
 }
