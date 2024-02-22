@@ -2,15 +2,60 @@ provider "aws" {
   region = "us-east-1"
 }
 
-resource "aws_vpc" "ansible_vpc" {
+resource "aws_vpc" "new_vpc" {
   cidr_block = "10.0.0.0/16"
 }
+
+resource "aws_subnet" "ans_sub" {
+  vpc_id = aws_vpc.new_vpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = {
+    Name = "ans_sub"
+  }
+}
+
+resource "aws_security_group" "ans_sg" {
+  name = "ans_ssh"
+  vpc_id = aws_vpc.new_vpc.id
+
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "SSH"
+  }
+
+  ingress {
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP from VPC"
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ans-sg"
+  }
+
+}
+
 
 resource "aws_instance" "ansible_server" {
   ami = "ami-0c7217cdde317cfec"
   instance_type = "t2.micro"
-  subnet_id = "subnet"
+  subnet_id = aws_subnet.ans_sub.id
+  vpc_security_group_ids = [ aws_security_group.ans_sg.id ]
   key_name = var.key-name
+  associate_public_ip_address = true
   
   user_data = <<-EOF
   #!/bin/bash -ex
@@ -30,8 +75,10 @@ resource "aws_instance" "ansible_server" {
 resource "aws_instance" "target_server" {
   ami = "ami-0c7217cdde317cfec"
   instance_type = "t2.micro"
-  subnet_id = "subnet-0e11d1bc0fa347587"
-  key_name = "terra-key"
+  subnet_id = aws_subnet.ans_sub.id
+  vpc_security_group_ids = [ aws_security_group.ans_sg.id ]
+  key_name = var.key-name
+  associate_public_ip_address = true
   tags = {
     Name = "target_server"
   }
