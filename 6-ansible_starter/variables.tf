@@ -1,3 +1,0 @@
-variable "key-name" {
-  
-}
